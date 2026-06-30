@@ -162,6 +162,101 @@ select {
   display: block;
 }
 
+/* ---------- Éditeur ---------- */
+#editor-workspace { display: flex; flex-direction: column; gap: 24px; }
+.card h2 { margin: 0 0 14px; font-size: 1.1rem; }
+
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+.page-card {
+  position: relative;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  text-align: center;
+  cursor: grab;
+  transition: border-color .15s, opacity .15s, transform .1s;
+}
+.page-card.dragging { opacity: .4; }
+.page-card.drag-over { border-color: var(--accent); }
+.page-card.deleted { opacity: .35; border-style: dashed; }
+.page-card.deleted .thumb { filter: grayscale(1); }
+.page-card img.thumb {
+  width: 100%;
+  border-radius: 4px;
+  background: #fff;
+  display: block;
+  pointer-events: none;
+}
+.page-card .pg-label { font-size: .8rem; color: var(--muted); margin: 6px 0 4px; }
+.page-card .pg-tools { display: flex; gap: 4px; justify-content: center; }
+.page-card .pg-tools button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: .8rem;
+  cursor: pointer;
+}
+.page-card .pg-tools button:hover { background: #324159; }
+.page-card .rot-badge {
+  position: absolute;
+  top: 6px; right: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: .68rem;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.overlay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.overlay-controls .field { font-size: .82rem; }
+.overlay-controls .field.grow { flex: 1; min-width: 180px; }
+.overlay-controls input[type="text"],
+.overlay-controls input[type="number"] {
+  background: var(--card-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: .9rem;
+  width: 100%;
+}
+.overlay-controls input[type="range"] { min-width: 120px; }
+.overlay-controls input[type="color"] {
+  width: 44px; height: 38px; padding: 2px;
+  background: var(--card-2); border: 1px solid var(--border); border-radius: 8px;
+}
+
+.overlay-list, .fields-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.overlay-list li {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--card-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; font-size: .88rem;
+}
+.overlay-list button {
+  background: transparent; border: 0; color: var(--danger);
+  cursor: pointer; font-size: 1rem;
+}
+.fields-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); }
+.fields-list label { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; color: var(--muted); }
+.fields-list input {
+  background: var(--card-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: .9rem;
+}
+.apply-card { text-align: center; }
+.apply-card .btn-primary { font-size: 1rem; padding: 13px 26px; }
+
 .footer {
   text-align: center;
   color: var(--muted);

@@ -30,6 +30,10 @@ from image_converter import (
     images_to_zip,
     pdf_to_images,
 )
+import json as _json
+
+import pdf_editor
+from pdf_editor import PdfEditError
 
 # Taille maximale d'upload (16 Mo par défaut, configurable via la variable
 # d'environnement MAX_UPLOAD_MB).
@@ -213,6 +217,108 @@ def api_pdf_to_images():
         mimetype="application/zip",
         as_attachment=True,
         download_name=f"{stem}-png.zip",
+    )
+
+
+@app.route("/api/pdf/inspect", methods=["POST"])
+def api_pdf_inspect():
+    """Renvoie vignettes et champs de formulaire pour alimenter l'éditeur."""
+    try:
+        data, _ = _read_pdf_upload()
+        info = pdf_editor.inspect(data, max_pages=MAX_PAGES)
+    except (PdfEditError, ImageConversionError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "page_count": info.page_count,
+            "pages": [
+                {
+                    "index": p.index,
+                    "width": p.width,
+                    "height": p.height,
+                    "rotation": p.rotation,
+                    "thumbnail": p.thumbnail,
+                }
+                for p in info.pages
+            ],
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": f.type,
+                    "value": f.value,
+                    "page_index": f.page_index,
+                }
+                for f in info.fields
+            ],
+            "warnings": info.warnings,
+        }
+    )
+
+
+@app.route("/api/pdf/edit", methods=["POST"])
+def api_pdf_edit():
+    """Applique les opérations d'édition et renvoie le PDF résultant."""
+    try:
+        data, filename = _read_pdf_upload()
+
+        raw_spec = request.form.get("spec", "{}")
+        try:
+            spec = _json.loads(raw_spec)
+        except ValueError:
+            raise PdfEditError("Spécification d'édition invalide (JSON attendu).")
+        if not isinstance(spec, dict):
+            raise PdfEditError("Spécification d'édition invalide.")
+
+        # PDF supplémentaires à fusionner (facultatif).
+        appended = []
+        for upload in request.files.getlist("append"):
+            if upload and upload.filename:
+                extra = upload.read()
+                if extra[:4] != b"%PDF":
+                    raise PdfEditError(
+                        f"Fichier à fusionner non valide : {upload.filename}"
+                    )
+                appended.append(extra)
+
+        result = pdf_editor.edit(data, spec, appended=appended)
+    except (PdfEditError, ImageConversionError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    out_name = os.path.splitext(filename)[0] + "-edite.pdf"
+    buffer = io.BytesIO(result)
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=out_name,
+    )
+
+
+@app.route("/api/pdf/merge", methods=["POST"])
+def api_pdf_merge():
+    """Fusionne plusieurs PDF en un seul."""
+    uploads = [u for u in request.files.getlist("files") if u and u.filename]
+    try:
+        if len(uploads) < 2:
+            raise PdfEditError("Fournissez au moins deux PDF à fusionner.")
+        blobs = []
+        for upload in uploads:
+            data = upload.read()
+            if data[:4] != b"%PDF":
+                raise PdfEditError(f"Fichier non valide : {upload.filename}")
+            blobs.append(data)
+        result = pdf_editor.merge(blobs)
+    except PdfEditError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    buffer = io.BytesIO(result)
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="fusion.pdf",
     )
 
 

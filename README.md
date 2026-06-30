@@ -6,6 +6,8 @@ entre **PDF**, **HTML** et **images** :
 - **PDF → HTML** (conservation de la mise en page et des images)
 - **PNG → PDF** (et JPEG, GIF, BMP, TIFF — une image par page)
 - **PDF → PNG** (rendu de chaque page, résolution réglable)
+- **Éditeur PDF** (réorganiser, pivoter, supprimer, fusionner, ajouter du
+  texte/filigrane, remplir des champs de formulaire)
 
 Tout s'appuie sur [PyMuPDF](https://pymupdf.readthedocs.io/) et se passe
 **localement** : aucun fichier n'est conservé sur le serveur.
@@ -19,6 +21,13 @@ Tout s'appuie sur [PyMuPDF](https://pymupdf.readthedocs.io/) et se passe
   - `text` — texte brut échappé
 - **PNG → PDF** : assemble plusieurs images en un seul PDF, dans l'ordre choisi
 - **PDF → PNG** : 1 page → PNG, plusieurs pages → archive ZIP ; DPI réglable
+- **Éditeur PDF** (sans état, aucun stockage serveur) :
+  - vignettes des pages, **glisser-déposer** pour réordonner
+  - **pivoter** (90/180/270°) et **supprimer/restaurer** des pages
+  - **fusionner** des PDF supplémentaires à la fin
+  - **ajouter du texte / un filigrane** (position, taille, couleur, opacité, angle)
+  - **remplir les champs** de formulaire (AcroForm) détectés automatiquement
+  - une seule requête applique toutes les opérations et renvoie le PDF édité
 - **Prévisualisation** HTML instantanée dans un cadre isolé (iframe sandbox)
 - **Téléchargement** des fichiers produits (HTML autonome, PDF, PNG, ZIP)
 - **Outils CLI** réutilisables (`converter.py`, `image_converter.py`)
@@ -84,6 +93,9 @@ python image_converter.py to-png document.pdf -o images/ --dpi 200
 | `POST`  | `/api/download`        | PDF → HTML, renvoie le fichier HTML               |
 | `POST`  | `/api/images-to-pdf`   | Images → PDF, renvoie le fichier PDF              |
 | `POST`  | `/api/pdf-to-images`   | PDF → PNG (PNG seul ou ZIP si plusieurs pages)    |
+| `POST`  | `/api/pdf/inspect`     | Vignettes des pages + champs de formulaire (JSON) |
+| `POST`  | `/api/pdf/edit`        | Applique les éditions, renvoie le PDF modifié     |
+| `POST`  | `/api/pdf/merge`       | Fusionne plusieurs PDF en un seul                 |
 | `GET`   | `/health`              | Vérification de l'état du service                 |
 
 Les routes attendent un `multipart/form-data` :
@@ -91,6 +103,29 @@ Les routes attendent un `multipart/form-data` :
 - `/api/convert` & `/api/download` : `file` (PDF), `mode` (`layout`|`reflow`|`text`)
 - `/api/images-to-pdf` : `images` (un ou plusieurs fichiers image)
 - `/api/pdf-to-images` : `file` (PDF), `dpi` (optionnel, 36–600)
+- `/api/pdf/inspect` : `file` (PDF)
+- `/api/pdf/edit` : `file` (PDF), `spec` (JSON, voir ci-dessous),
+  `append` (PDF supplémentaires facultatifs à fusionner)
+- `/api/pdf/merge` : `files` (au moins deux PDF)
+
+Format de `spec` pour `/api/pdf/edit` (toutes les clés sont optionnelles) :
+
+```json
+{
+  "pages":    [{"src": 2, "rotate": 90}, {"src": 0}],
+  "overlays": [{"page": 0, "text": "CONFIDENTIEL",
+                "x": 0.2, "y": 0.5, "size": 40,
+                "color": "#d00000", "opacity": 0.3, "rotate": 45}],
+  "fields":   {"nom": "Dupont", "date": "2026-06-30"}
+}
+```
+
+- `pages` : liste ordonnée des pages conservées (index d'origine `src`,
+  rotation cumulée). Les pages absentes sont supprimées ; réordonner la liste
+  réordonne le document.
+- `overlays` : textes/filigranes ajoutés (positions `x`/`y` en fraction
+  0–1 de la page).
+- `fields` : valeurs des champs de formulaire, par nom.
 
 Exemples avec `curl` :
 
@@ -122,6 +157,7 @@ pytest
 ├── app.py                  # Application web Flask (toutes les routes)
 ├── converter.py            # PDF -> HTML + CLI
 ├── image_converter.py      # Images <-> PDF + CLI
+├── pdf_editor.py           # Éditeur PDF (pages, texte, formulaires, fusion)
 ├── requirements.txt
 ├── templates/
 │   └── index.html          # Interface à onglets
@@ -130,7 +166,8 @@ pytest
 │   └── script.js
 └── tests/
     ├── test_converter.py
-    └── test_image_converter.py
+    ├── test_image_converter.py
+    └── test_pdf_editor.py
 ```
 
 ## 📝 Licence

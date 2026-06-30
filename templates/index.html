@@ -16,6 +16,7 @@
     <button class="tab active" data-tab="pdf-html" role="tab">📄 PDF → HTML</button>
     <button class="tab" data-tab="png-pdf" role="tab">🖼️ PNG → PDF</button>
     <button class="tab" data-tab="pdf-png" role="tab">📄 PDF → PNG</button>
+    <button class="tab" data-tab="editor" role="tab">✏️ Éditer un PDF</button>
   </nav>
 
   <main class="container">
@@ -104,6 +105,92 @@
         <p class="status" role="status" aria-live="polite"></p>
       </form>
     </section>
+    <!-- ======================= ÉDITEUR ======================= -->
+    <section class="panel" id="panel-editor">
+      <form id="editor-form" class="card">
+        <div class="dropzone" data-input="editor-file" tabindex="0">
+          <input type="file" id="editor-file" accept="application/pdf,.pdf" hidden>
+          <div class="dropzone-inner">
+            <span class="dz-icon">✏️</span>
+            <p class="dz-text">Glissez un PDF à éditer ou <span class="link">parcourez</span></p>
+            <p class="dz-hint">Réorganiser, pivoter, supprimer, fusionner, ajouter du texte, remplir des champs</p>
+          </div>
+          <p class="file-name" hidden></p>
+        </div>
+        <p class="status" role="status" aria-live="polite"></p>
+      </form>
+
+      <div id="editor-workspace" hidden>
+        <!-- Pages -->
+        <section class="card">
+          <div class="preview-head">
+            <h2>Pages</h2>
+            <span class="meta">Glissez pour réordonner · 🔄 pivoter · 🗑️ supprimer</span>
+          </div>
+          <div id="page-grid" class="page-grid"></div>
+        </section>
+
+        <!-- Ajout de texte / filigrane -->
+        <section class="card">
+          <h2>Ajouter du texte / un filigrane</h2>
+          <div class="overlay-controls">
+            <label class="field"><span>Page</span>
+              <select id="ov-page"></select>
+            </label>
+            <label class="field grow"><span>Texte</span>
+              <input type="text" id="ov-text" placeholder="CONFIDENTIEL, signature, note…">
+            </label>
+            <label class="field"><span>Taille</span>
+              <input type="number" id="ov-size" value="24" min="6" max="144" style="width:80px">
+            </label>
+            <label class="field"><span>Couleur</span>
+              <input type="color" id="ov-color" value="#d00000">
+            </label>
+            <label class="field"><span>Opacité <strong id="ov-op-val">0.4</strong></span>
+              <input type="range" id="ov-opacity" min="0.05" max="1" step="0.05" value="0.4">
+            </label>
+            <label class="field"><span>Angle</span>
+              <select id="ov-rotate">
+                <option value="0">0°</option>
+                <option value="45" selected>45° (diagonale)</option>
+                <option value="90">90°</option>
+              </select>
+            </label>
+            <label class="field"><span>Position H <strong id="ov-x-val">10%</strong></span>
+              <input type="range" id="ov-x" min="0" max="0.9" step="0.05" value="0.1">
+            </label>
+            <label class="field"><span>Position V <strong id="ov-y-val">50%</strong></span>
+              <input type="range" id="ov-y" min="0" max="0.95" step="0.05" value="0.5">
+            </label>
+            <button type="button" class="btn" id="ov-add">+ Ajouter</button>
+          </div>
+          <ul id="overlay-list" class="overlay-list"></ul>
+        </section>
+
+        <!-- Champs de formulaire -->
+        <section class="card" id="fields-card" hidden>
+          <h2>Champs de formulaire</h2>
+          <p class="hint-inline">Renseignez les champs détectés dans le PDF.</p>
+          <div id="fields-list" class="fields-list"></div>
+        </section>
+
+        <!-- Fusion -->
+        <section class="card">
+          <h2>Fusionner (ajouter des pages à la fin)</h2>
+          <div class="overlay-controls">
+            <input type="file" id="append-files" accept="application/pdf,.pdf" multiple>
+            <span id="append-info" class="hint-inline"></span>
+          </div>
+        </section>
+
+        <!-- Action finale -->
+        <section class="card apply-card">
+          <button type="button" class="btn btn-primary" id="apply-btn">Appliquer &amp; télécharger le PDF édité</button>
+          <p id="editor-result" class="status" role="status" aria-live="polite"></p>
+        </section>
+      </div>
+    </section>
+
   </main>
 
   <footer class="footer">
