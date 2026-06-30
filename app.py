@@ -22,6 +22,14 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from converter import VALID_MODES, ConversionError, convert_pdf
+from image_converter import (
+    DEFAULT_DPI,
+    SUPPORTED_IMAGE_EXTS,
+    ImageConversionError,
+    images_to_pdf,
+    images_to_zip,
+    pdf_to_images,
+)
 
 # Taille maximale d'upload (16 Mo par défaut, configurable via la variable
 # d'environnement MAX_UPLOAD_MB).
@@ -115,6 +123,96 @@ def api_download():
         mimetype="text/html",
         as_attachment=True,
         download_name=out_name,
+    )
+
+
+def _read_pdf_upload():
+    """Valide et lit un PDF envoyé (champ ``file``). Renvoie (octets, nom)."""
+    if "file" not in request.files:
+        raise ImageConversionError("Aucun fichier reçu.")
+    upload = request.files["file"]
+    if not upload or upload.filename == "":
+        raise ImageConversionError("Aucun fichier sélectionné.")
+    filename = secure_filename(upload.filename)
+    if not filename.lower().endswith(".pdf"):
+        raise ImageConversionError("Le fichier doit être un PDF (.pdf).")
+    data = upload.read()
+    if not data:
+        raise ImageConversionError("Le fichier est vide.")
+    if data[:4] != b"%PDF":
+        raise ImageConversionError("Le fichier ne semble pas être un PDF valide.")
+    return data, filename
+
+
+def _read_image_uploads():
+    """Valide et lit les images envoyées (champ ``images``). Renvoie (blobs, types)."""
+    uploads = request.files.getlist("images")
+    uploads = [u for u in uploads if u and u.filename]
+    if not uploads:
+        raise ImageConversionError("Aucune image reçue.")
+
+    blobs, types = [], []
+    for upload in uploads:
+        filename = secure_filename(upload.filename)
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in SUPPORTED_IMAGE_EXTS:
+            raise ImageConversionError(
+                f"Type d'image non supporté : {filename} "
+                f"(acceptés : {', '.join(SUPPORTED_IMAGE_EXTS)})"
+            )
+        data = upload.read()
+        if not data:
+            raise ImageConversionError(f"Image vide : {filename}")
+        blobs.append(data)
+        types.append(ext.lstrip("."))
+    return blobs, types
+
+
+@app.route("/api/images-to-pdf", methods=["POST"])
+def api_images_to_pdf():
+    """Assemble une ou plusieurs images en un seul PDF."""
+    try:
+        blobs, types = _read_image_uploads()
+        pdf_bytes = images_to_pdf(blobs, filetypes=types)
+    except ImageConversionError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    buffer = io.BytesIO(pdf_bytes)
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="images.pdf",
+    )
+
+
+@app.route("/api/pdf-to-images", methods=["POST"])
+def api_pdf_to_images():
+    """Rend un PDF en PNG : une seule page -> PNG, sinon archive ZIP."""
+    try:
+        data, filename = _read_pdf_upload()
+        dpi = request.form.get("dpi", type=int) or DEFAULT_DPI
+        result = pdf_to_images(data, dpi=dpi, max_pages=MAX_PAGES)
+    except ImageConversionError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    stem = os.path.splitext(filename)[0]
+    if result.page_count == 1:
+        buffer = io.BytesIO(result.images[0])
+        return send_file(
+            buffer,
+            mimetype="image/png",
+            as_attachment=True,
+            download_name=f"{stem}.png",
+        )
+
+    zip_bytes = images_to_zip(result.images, basename=stem)
+    buffer = io.BytesIO(zip_bytes)
+    return send_file(
+        buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"{stem}-png.zip",
     )
 
 

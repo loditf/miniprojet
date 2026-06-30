@@ -1,23 +1,29 @@
-# 📄 → 🌐 Convertisseur PDF → HTML
+# 🔄 Convertisseur PDF &amp; Images
 
-Une application web simple (et un outil en ligne de commande) pour convertir
-des fichiers PDF en HTML, avec conservation de la mise en page et des images.
+Une application web simple (et des outils en ligne de commande) pour convertir
+entre **PDF**, **HTML** et **images** :
 
-La conversion s'appuie sur [PyMuPDF](https://pymupdf.readthedocs.io/) et tout
-se passe **localement** : aucun fichier n'est conservé sur le serveur.
+- **PDF → HTML** (conservation de la mise en page et des images)
+- **PNG → PDF** (et JPEG, GIF, BMP, TIFF — une image par page)
+- **PDF → PNG** (rendu de chaque page, résolution réglable)
+
+Tout s'appuie sur [PyMuPDF](https://pymupdf.readthedocs.io/) et se passe
+**localement** : aucun fichier n'est conservé sur le serveur.
 
 ## ✨ Fonctionnalités
 
-- **Glisser-déposer** d'un PDF dans le navigateur
-- **3 modes de conversion** :
+- Interface à **onglets** avec **glisser-déposer**
+- **PDF → HTML**, 3 modes :
   - `layout` — fidèle à la mise en page (positions absolues, images intégrées)
   - `reflow` — texte réagençable et responsive (plus accessible)
   - `text` — texte brut échappé
-- **Prévisualisation** instantanée dans un cadre isolé (iframe sandbox)
-- **Téléchargement** du fichier HTML autonome (images embarquées en base64)
-- **Outil CLI** réutilisable
+- **PNG → PDF** : assemble plusieurs images en un seul PDF, dans l'ordre choisi
+- **PDF → PNG** : 1 page → PNG, plusieurs pages → archive ZIP ; DPI réglable
+- **Prévisualisation** HTML instantanée dans un cadre isolé (iframe sandbox)
+- **Téléchargement** des fichiers produits (HTML autonome, PDF, PNG, ZIP)
+- **Outils CLI** réutilisables (`converter.py`, `image_converter.py`)
 - Validation des entrées (type, signature, taille, PDF protégés)
-- Suite de **tests** automatisés
+- Suite de **tests** automatisés (20 tests)
 
 ## 🚀 Installation
 
@@ -46,6 +52,8 @@ Variables d'environnement optionnelles :
 
 ## 🛠️ Utilisation en ligne de commande
 
+### PDF → HTML (`converter.py`)
+
 ```bash
 # Conversion fidèle à la mise en page (défaut)
 python converter.py document.pdf
@@ -57,23 +65,47 @@ python converter.py document.pdf -m reflow -o sortie.html
 python converter.py gros-document.pdf --max-pages 10
 ```
 
-## 🔌 API HTTP
-
-| Méthode | Route           | Description                                  |
-|---------|-----------------|----------------------------------------------|
-| `GET`   | `/`             | Interface web                                |
-| `POST`  | `/api/convert`  | Convertit et renvoie le HTML en JSON         |
-| `POST`  | `/api/download` | Convertit et renvoie le fichier HTML         |
-| `GET`   | `/health`       | Vérification de l'état du service            |
-
-Les routes de conversion attendent un `multipart/form-data` avec les champs
-`file` (le PDF) et `mode` (`layout` | `reflow` | `text`).
-
-Exemple avec `curl` :
+### Images ↔ PDF (`image_converter.py`)
 
 ```bash
+# PNG (et autres images) -> PDF, une image par page
+python image_converter.py to-pdf page1.png page2.jpg -o album.pdf
+
+# PDF -> PNG, une image par page dans un dossier
+python image_converter.py to-png document.pdf -o images/ --dpi 200
+```
+
+## 🔌 API HTTP
+
+| Méthode | Route                  | Description                                       |
+|---------|------------------------|---------------------------------------------------|
+| `GET`   | `/`                    | Interface web                                     |
+| `POST`  | `/api/convert`         | PDF → HTML, renvoie le HTML en JSON               |
+| `POST`  | `/api/download`        | PDF → HTML, renvoie le fichier HTML               |
+| `POST`  | `/api/images-to-pdf`   | Images → PDF, renvoie le fichier PDF              |
+| `POST`  | `/api/pdf-to-images`   | PDF → PNG (PNG seul ou ZIP si plusieurs pages)    |
+| `GET`   | `/health`              | Vérification de l'état du service                 |
+
+Les routes attendent un `multipart/form-data` :
+
+- `/api/convert` & `/api/download` : `file` (PDF), `mode` (`layout`|`reflow`|`text`)
+- `/api/images-to-pdf` : `images` (un ou plusieurs fichiers image)
+- `/api/pdf-to-images` : `file` (PDF), `dpi` (optionnel, 36–600)
+
+Exemples avec `curl` :
+
+```bash
+# PDF -> HTML
 curl -F "file=@document.pdf" -F "mode=reflow" \
      http://127.0.0.1:5000/api/download -o sortie.html
+
+# PNG -> PDF
+curl -F "images=@p1.png" -F "images=@p2.png" \
+     http://127.0.0.1:5000/api/images-to-pdf -o album.pdf
+
+# PDF -> PNG (ZIP si plusieurs pages)
+curl -F "file=@document.pdf" -F "dpi=200" \
+     http://127.0.0.1:5000/api/pdf-to-images -o pages.zip
 ```
 
 ## 🧪 Tests
@@ -87,16 +119,18 @@ pytest
 
 ```
 .
-├── app.py              # Application web Flask
-├── converter.py        # Cœur de conversion + CLI
+├── app.py                  # Application web Flask (toutes les routes)
+├── converter.py            # PDF -> HTML + CLI
+├── image_converter.py      # Images <-> PDF + CLI
 ├── requirements.txt
 ├── templates/
-│   └── index.html      # Interface
+│   └── index.html          # Interface à onglets
 ├── static/
 │   ├── style.css
 │   └── script.js
 └── tests/
-    └── test_converter.py
+    ├── test_converter.py
+    └── test_image_converter.py
 ```
 
 ## 📝 Licence
