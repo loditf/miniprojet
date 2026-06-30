@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Convertisseur PDF → HTML</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <h1>📄→🌐 Convertisseur PDF → HTML</h1>
+    <p class="subtitle">Déposez un PDF, choisissez un mode, prévisualisez et téléchargez le HTML.</p>
+  </header>
+
+  <main class="container">
+    <form id="convert-form" class="card">
+      <div id="dropzone" class="dropzone" tabindex="0">
+        <input type="file" id="file-input" name="file" accept="application/pdf,.pdf" hidden>
+        <div class="dropzone-inner">
+          <span class="dz-icon">⬆️</span>
+          <p class="dz-text">Glissez un PDF ici ou <span class="link">parcourez vos fichiers</span></p>
+          <p class="dz-hint">Taille maximale : {{ max_mb }} Mo</p>
+        </div>
+        <p id="file-name" class="file-name" hidden></p>
+      </div>
+
+      <div class="controls">
+        <label class="field">
+          <span>Mode de conversion</span>
+          <select id="mode" name="mode">
+            <option value="layout">Fidèle à la mise en page</option>
+            <option value="reflow">Texte réagençable (responsive)</option>
+            <option value="text">Texte brut</option>
+          </select>
+        </label>
+
+        <div class="actions">
+          <button type="submit" id="preview-btn" class="btn btn-primary" disabled>Convertir &amp; prévisualiser</button>
+          <button type="button" id="download-btn" class="btn" disabled>Télécharger le HTML</button>
+        </div>
+      </div>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <section id="preview-section" class="card preview-card" hidden>
+      <div class="preview-head">
+        <h2>Aperçu</h2>
+        <span id="preview-meta" class="meta"></span>
+      </div>
+      <iframe id="preview-frame" title="Aperçu HTML" class="preview-frame"></iframe>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Conversion locale via PyMuPDF — aucun fichier n'est conservé sur le serveur.</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

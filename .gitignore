@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Sorties de conversion
+*.html
+!templates/*.html
+samples/*.html
+
+# Éditeurs / OS
+.vscode/
+.idea/
+.DS_Store
